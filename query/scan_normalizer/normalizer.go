@@ -20,8 +20,20 @@ func (n *Normalizer) NormalizeQuery(q string) string {
 
 	var rv []rune
 
+	maybeDeleteAsc := func() {
+		rvlen := len(rv)
+		if rvlen <= 4 {
+			return
+		}
+
+		if rv[rvlen-1] == 'c' && rv[rvlen-2] == 's' && rv[rvlen-3] == 'a' && rv[rvlen-4] == ' ' {
+			rv = rv[0 : rvlen-4]
+		}
+	}
+
 	maybeAddSpace := func() {
 		if needSpace {
+			maybeDeleteAsc()
 			needSpace = false
 			rv = append(rv, ' ')
 		}
@@ -81,11 +93,15 @@ func (n *Normalizer) NormalizeQuery(q string) string {
 			maybeAddSpace()
 
 			canStartNumber = r != '_' && !unicode.IsLetter(r) && !unicode.IsDigit(r)
+			if canStartNumber {
+				maybeDeleteAsc()
+			}
 
 			rv = append(rv, unicode.ToLower(r))
 
 		}
 	}
+	maybeDeleteAsc()
 
 	return string(rv)
 }
