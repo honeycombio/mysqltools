@@ -1,5 +1,7 @@
 # mysqltools
 
+[![Build Status](https://travis-ci.org/honeycombio/mysqltools.svg?branch=master)](https://travis-ci.org/honeycombio/mysqltools)
+
 ## Summary
 
 Fast query normalization for mysql query.

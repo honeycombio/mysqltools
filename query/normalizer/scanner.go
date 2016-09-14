@@ -1,13 +1,15 @@
-package scan_normalizer
+package normalizer
 
 import (
 	"unicode"
 )
 
-type Normalizer struct {
+// Scanner represents state and options used for multiple calls to NormalizeQuery
+type Scanner struct {
 }
 
-func (n *Normalizer) NormalizeQuery(q string) string {
+// NormalizeQuery converts an sql statement into a normalized version (downcased, with all string/numeric literals replaced with ?).  It most definitely does not validate that a query is syntactically correct.
+func (n *Scanner) NormalizeQuery(q string) string {
 
 	// three bools to manage our state, in order of priority.
 	var escaped bool
