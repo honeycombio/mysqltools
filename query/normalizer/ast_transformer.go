@@ -110,8 +110,10 @@ func transform(node sqlparser.SQLNode, t transformer) sqlparser.SQLNode {
 		return t.TransformTableExprs(node.(sqlparser.TableExprs))
 	case isAliasedTableExprNode(node):
 		return t.TransformAliasedTableExpr(node.(*sqlparser.AliasedTableExpr))
-	case isTableName(node):
+	case isTableNameNode(node):
 		return t.TransformTableName(node.(*sqlparser.TableName))
+	case isJoinTableExprNode(node):
+		return t.TransformJoinTableExpr(node.(*sqlparser.JoinTableExpr))
 	default:
 		log.Fatal(fmt.Sprintf("not handled %+v", reflect.TypeOf(node)))
 		return nil
@@ -218,7 +220,11 @@ func isAliasedTableExprNode(node sqlparser.SQLNode) bool {
 	return isType(node, reflect.TypeOf((*sqlparser.AliasedTableExpr)(nil)))
 }
 
-func isTableName(node sqlparser.SQLNode) bool {
+func isJoinTableExprNode(node sqlparser.SQLNode) bool {
+	return isType(node, reflect.TypeOf((*sqlparser.JoinTableExpr)(nil)))
+}
+
+func isTableNameNode(node sqlparser.SQLNode) bool {
 	return isType(node, reflect.TypeOf((*sqlparser.TableName)(nil)))
 }
 

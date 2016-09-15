@@ -170,6 +170,8 @@ func (n *Parser) TransformJoinTableExpr(node *sqlparser.JoinTableExpr) sqlparser
 	if node == nil {
 		return nil
 	}
+	node.LeftExpr, _ = transform(node.LeftExpr, n).(sqlparser.TableExpr)
+	node.RightExpr, _ = transform(node.RightExpr, n).(sqlparser.TableExpr)
 	node.On, _ = transform(node.On, n).(sqlparser.BoolExpr)
 	return node
 }

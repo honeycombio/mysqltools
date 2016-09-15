@@ -92,6 +92,12 @@ var parserTests = []struct {
 		"delete",
 		[]string{"tablename"},
 	},
+	{"inner join",
+		"SELECT `colname` FROM `tablename` INNER JOIN `tablename2` ON `tablename`.`colName` = `tablename2`.`colName2` WHERE `tablename`.`intCol` = 314159",
+		"select colname from tablename join tablename2 on tablename.colname = tablename2.colname2 where tablename.intcol = ?",
+		"select",
+		[]string{"tablename", "tablename2"},
+	},
 	//{"alter table", "ALTER TABLE `tablename` ADD COLUMN `text` VARCHAR(100) NOT NULL AFTER `before_text`", "alter table tablename add column text varchar(?) not null after before_text"},
 }
 
