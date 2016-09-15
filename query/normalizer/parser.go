@@ -1,21 +1,34 @@
 package normalizer
 
 import (
+	"fmt"
+	"log"
+	"reflect"
+	"sort"
 	"strings"
 
 	"github.com/toshok/sqlparser"
 )
 
 type Parser struct {
+	LastStatement string
+	LastTables    []string
 }
 
 func (n *Parser) NormalizeQuery(q string) string {
+	n.LastStatement = ""
+	n.LastTables = make([]string, 0)
+
 	sqlAST, err := sqlparser.Parse(q)
 	if err != nil {
 		return ""
 	}
 
 	newAST := transform(sqlAST, n)
+
+	n.LastStatement = classifyStatement(sqlAST)
+
+	sort.Sort(sort.StringSlice(n.LastTables))
 
 	return strings.ToLower(sqlparser.String(newAST))
 }
@@ -37,6 +50,7 @@ func (n *Parser) TransformSelect(node *sqlparser.Select) sqlparser.SQLNode {
 	}
 	node.SelectExprs, _ = transform(node.SelectExprs, n).(sqlparser.SelectExprs)
 	node.Where, _ = transform(node.Where, n).(*sqlparser.Where)
+	node.From, _ = transform(node.From, n).(sqlparser.TableExprs)
 	node.Limit, _ = transform(node.Limit, n).(*sqlparser.Limit)
 	return node
 }
@@ -60,8 +74,8 @@ func (n *Parser) TransformInsert(node *sqlparser.Insert) sqlparser.SQLNode {
 	if node == nil {
 		return nil
 	}
-	// remove comments
-	node.Comments = make([][]byte, 0)
+	node.Comments = make([][]byte, 0) // remove comments
+	node.Table, _ = transform(node.Table, n).(*sqlparser.TableName)
 	node.Rows, _ = transform(node.Rows, n).(sqlparser.InsertRows)
 	// XXX(toshok) not yet node.OnDup, _ = transform(node.OnDup, n).(sqlparser.OnDup)
 	return node
@@ -70,9 +84,8 @@ func (n *Parser) TransformUpdate(node *sqlparser.Update) sqlparser.SQLNode {
 	if node == nil {
 		return nil
 	}
-	// remove comments
-	node.Comments = make([][]byte, 0)
-
+	node.Comments = make([][]byte, 0) // remove comments
+	node.Table, _ = transform(node.Table, n).(*sqlparser.TableName)
 	node.Exprs, _ = transform(node.Exprs, n).(sqlparser.UpdateExprs)
 	node.Where, _ = transform(node.Where, n).(*sqlparser.Where)
 	node.Limit, _ = transform(node.Limit, n).(*sqlparser.Limit)
@@ -82,9 +95,8 @@ func (n *Parser) TransformDelete(node *sqlparser.Delete) sqlparser.SQLNode {
 	if node == nil {
 		return nil
 	}
-	// remove comments
-	node.Comments = make([][]byte, 0)
-
+	node.Comments = make([][]byte, 0) // remove comments
+	node.Table, _ = transform(node.Table, n).(*sqlparser.TableName)
 	node.Where, _ = transform(node.Where, n).(*sqlparser.Where)
 	node.Limit, _ = transform(node.Limit, n).(*sqlparser.Limit)
 	return node
@@ -93,19 +105,28 @@ func (n *Parser) TransformSet(node *sqlparser.Set) sqlparser.SQLNode {
 	if node == nil {
 		return nil
 	}
-	// remove comments
-	node.Comments = make([][]byte, 0)
+	node.Comments = make([][]byte, 0) // remove comments
 	node.Exprs, _ = transform(node.Exprs, n).(sqlparser.UpdateExprs)
 	return node
 }
-func (n *Parser) TransformDDL(node *sqlparser.DDL) sqlparser.SQLNode { return node }
+
+func (n *Parser) TransformDDL(node *sqlparser.DDL) sqlparser.SQLNode {
+	return node
+}
+
 func (n *Parser) TransformColumnDefinition(node *sqlparser.ColumnDefinition) sqlparser.SQLNode {
 	return node
 }
+
 func (n *Parser) TransformCreateTable(node *sqlparser.CreateTable) sqlparser.SQLNode {
 	return node
 }
-func (n *Parser) TransformStarExpr(node *sqlparser.StarExpr) sqlparser.SQLNode { return node }
+
+func (n *Parser) TransformStarExpr(node *sqlparser.StarExpr) sqlparser.SQLNode {
+	// XXX(toshok) TableName
+	return node
+}
+
 func (n *Parser) TransformNonStarExpr(node *sqlparser.NonStarExpr) sqlparser.SQLNode {
 	if node == nil {
 		return nil
@@ -113,10 +134,34 @@ func (n *Parser) TransformNonStarExpr(node *sqlparser.NonStarExpr) sqlparser.SQL
 	node.Expr, _ = transform(node.Expr, n).(sqlparser.Expr)
 	return node
 }
+
 func (n *Parser) TransformAliasedTableExpr(node *sqlparser.AliasedTableExpr) sqlparser.SQLNode {
+	if node == nil {
+		return nil
+	}
+	node.Expr, _ = transform(node.Expr, n).(sqlparser.SimpleTableExpr)
 	return node
 }
-func (n *Parser) TransformTableName(node *sqlparser.TableName) sqlparser.SQLNode { return node }
+
+func (n *Parser) TransformTableName(node *sqlparser.TableName) sqlparser.SQLNode {
+	if node == nil {
+		return nil
+	}
+
+	tableNameStr := sqlparser.String(node)
+	found := false
+	for _, t := range n.LastTables {
+		if t == tableNameStr {
+			found = true
+			break
+		}
+	}
+
+	if !found {
+		n.LastTables = append(n.LastTables, tableNameStr)
+	}
+	return node
+}
 
 //func (n *Parser) TransformParentTableExpr(node *sqlparser.ParentTableExpr) sqlparser.SQLNode {
 //	return node
@@ -187,8 +232,12 @@ func (n *Parser) TransformRangeCond(node *sqlparser.RangeCond) sqlparser.SQLNode
 	node.To, _ = transform(node.To, n).(sqlparser.ValExpr)
 	return node
 }
-func (n *Parser) TransformNullCheck(node *sqlparser.NullCheck) sqlparser.SQLNode   { return node }
-func (n *Parser) TransformExistsExpr(node *sqlparser.ExistsExpr) sqlparser.SQLNode { return node }
+func (n *Parser) TransformNullCheck(node *sqlparser.NullCheck) sqlparser.SQLNode {
+	return node
+}
+func (n *Parser) TransformExistsExpr(node *sqlparser.ExistsExpr) sqlparser.SQLNode {
+	return node
+}
 func (n *Parser) TransformBinaryVal(node sqlparser.BinaryVal) sqlparser.SQLNode {
 	return &QuestionMarkExpr{}
 }
@@ -209,8 +258,12 @@ func (n *Parser) TransformValTuple(node sqlparser.ValTuple) sqlparser.SQLNode {
 	}
 	return newSlice
 }
-func (n *Parser) TransformNullVal(node *sqlparser.NullVal) sqlparser.SQLNode { return node }
-func (n *Parser) TransformColName(node *sqlparser.ColName) sqlparser.SQLNode { return node }
+func (n *Parser) TransformNullVal(node *sqlparser.NullVal) sqlparser.SQLNode {
+	return node
+}
+func (n *Parser) TransformColName(node *sqlparser.ColName) sqlparser.SQLNode {
+	return node
+}
 func (n *Parser) TransformSubquery(node *sqlparser.Subquery) sqlparser.SQLNode {
 	if node == nil {
 		return nil
@@ -259,7 +312,9 @@ func (n *Parser) TransformWhen(node *sqlparser.When) sqlparser.SQLNode {
 	node.Val, _ = transform(node.Val, n).(sqlparser.ValExpr)
 	return node
 }
-func (n *Parser) TransformOrder(node *sqlparser.Order) sqlparser.SQLNode { return node }
+func (n *Parser) TransformOrder(node *sqlparser.Order) sqlparser.SQLNode {
+	return node
+}
 func (n *Parser) TransformLimit(node *sqlparser.Limit) sqlparser.SQLNode {
 	if node == nil {
 		return nil
@@ -283,4 +338,40 @@ func (n *Parser) TransformValues(node sqlparser.Values) sqlparser.SQLNode {
 		newSlice = append(newSlice, rowTuple)
 	}
 	return newSlice
+}
+
+func (n *Parser) TransformTableExprs(node sqlparser.TableExprs) sqlparser.SQLNode {
+	var newSlice sqlparser.TableExprs
+	for _, te := range node {
+		te, _ := transform(te, n).(sqlparser.TableExpr)
+		newSlice = append(newSlice, te)
+	}
+	return newSlice
+}
+
+func (n *Parser) TransformAliasedTablExpr(node *sqlparser.AliasedTableExpr) sqlparser.SQLNode {
+	if node == nil {
+		return nil
+	}
+	node.Expr, _ = transform(node.Expr, n).(sqlparser.SimpleTableExpr)
+	return node
+}
+
+func classifyStatement(node sqlparser.SQLNode) string {
+	if node == nil {
+		return ""
+	}
+	switch {
+	case isSelectNode(node):
+		return "select"
+	case isUnionNode(node):
+		return "union"
+	case isInsertNode(node):
+		return "insert"
+	case isDeleteNode(node):
+		return "delete"
+	default:
+		log.Fatal(fmt.Sprintf("not handled %+v", reflect.TypeOf(node)))
+		return ""
+	}
 }

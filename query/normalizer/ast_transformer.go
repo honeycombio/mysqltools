@@ -52,6 +52,7 @@ type transformer interface {
 	TransformLimit(*sqlparser.Limit) sqlparser.SQLNode
 	TransformUpdateExpr(*sqlparser.UpdateExpr) sqlparser.SQLNode
 	TransformValues(sqlparser.Values) sqlparser.SQLNode
+	TransformTableExprs(sqlparser.TableExprs) sqlparser.SQLNode
 }
 
 func transform(node sqlparser.SQLNode, t transformer) sqlparser.SQLNode {
@@ -105,6 +106,12 @@ func transform(node sqlparser.SQLNode, t transformer) sqlparser.SQLNode {
 		return t.TransformValues(node.(sqlparser.Values))
 	case isDeleteNode(node):
 		return t.TransformDelete(node.(*sqlparser.Delete))
+	case isTableExprsNode(node):
+		return t.TransformTableExprs(node.(sqlparser.TableExprs))
+	case isAliasedTableExprNode(node):
+		return t.TransformAliasedTableExpr(node.(*sqlparser.AliasedTableExpr))
+	case isTableName(node):
+		return t.TransformTableName(node.(*sqlparser.TableName))
 	default:
 		log.Fatal(fmt.Sprintf("not handled %+v", reflect.TypeOf(node)))
 		return nil
@@ -201,6 +208,18 @@ func isValuesNode(node sqlparser.SQLNode) bool {
 
 func isDeleteNode(node sqlparser.SQLNode) bool {
 	return isType(node, reflect.TypeOf((*sqlparser.Delete)(nil)))
+}
+
+func isTableExprsNode(node sqlparser.SQLNode) bool {
+	return isType(node, reflect.TypeOf((*sqlparser.TableExprs)(nil)).Elem())
+}
+
+func isAliasedTableExprNode(node sqlparser.SQLNode) bool {
+	return isType(node, reflect.TypeOf((*sqlparser.AliasedTableExpr)(nil)))
+}
+
+func isTableName(node sqlparser.SQLNode) bool {
+	return isType(node, reflect.TypeOf((*sqlparser.TableName)(nil)))
 }
 
 func isType(node sqlparser.SQLNode, ty reflect.Type) bool {
