@@ -55,65 +55,97 @@ type transformer interface {
 	TransformTableExprs(sqlparser.TableExprs) sqlparser.SQLNode
 }
 
+var (
+	selectType           reflect.Type = reflect.TypeOf((*sqlparser.Select)(nil))
+	whereType            reflect.Type = reflect.TypeOf((*sqlparser.Where)(nil))
+	comparisonExprType   reflect.Type = reflect.TypeOf((*sqlparser.ComparisonExpr)(nil))
+	andExprType          reflect.Type = reflect.TypeOf((*sqlparser.AndExpr)(nil))
+	orExprType           reflect.Type = reflect.TypeOf((*sqlparser.OrExpr)(nil))
+	notExprType          reflect.Type = reflect.TypeOf((*sqlparser.NotExpr)(nil))
+	colNameType          reflect.Type = reflect.TypeOf((*sqlparser.ColName)(nil))
+	starExprType         reflect.Type = reflect.TypeOf((*sqlparser.StarExpr)(nil))
+	nonStarExprType      reflect.Type = reflect.TypeOf((*sqlparser.NonStarExpr)(nil))
+	parenBoolExprType    reflect.Type = reflect.TypeOf((*sqlparser.ParenBoolExpr)(nil))
+	limitType            reflect.Type = reflect.TypeOf((*sqlparser.Limit)(nil))
+	funcExprType         reflect.Type = reflect.TypeOf((*sqlparser.FuncExpr)(nil))
+	rangeCondType        reflect.Type = reflect.TypeOf((*sqlparser.RangeCond)(nil))
+	ddlType              reflect.Type = reflect.TypeOf((*sqlparser.DDL)(nil))
+	unionType            reflect.Type = reflect.TypeOf((*sqlparser.Union)(nil))
+	insertType           reflect.Type = reflect.TypeOf((*sqlparser.Insert)(nil))
+	deleteType           reflect.Type = reflect.TypeOf((*sqlparser.Delete)(nil))
+	aliasedTableExprType reflect.Type = reflect.TypeOf((*sqlparser.AliasedTableExpr)(nil))
+	tableNameType        reflect.Type = reflect.TypeOf((*sqlparser.TableName)(nil))
+	joinTableExprType    reflect.Type = reflect.TypeOf((*sqlparser.JoinTableExpr)(nil))
+
+	numValType      reflect.Type = reflect.TypeOf((*sqlparser.NumVal)(nil)).Elem()
+	strValType      reflect.Type = reflect.TypeOf((*sqlparser.StrVal)(nil)).Elem()
+	binaryValType   reflect.Type = reflect.TypeOf((*sqlparser.BinaryVal)(nil)).Elem()
+	selectExprsType reflect.Type = reflect.TypeOf((*sqlparser.SelectExprs)(nil)).Elem()
+	valTupleType    reflect.Type = reflect.TypeOf((*sqlparser.ValTuple)(nil)).Elem()
+	valuesType      reflect.Type = reflect.TypeOf((*sqlparser.Values)(nil)).Elem()
+	tableExprsType  reflect.Type = reflect.TypeOf((*sqlparser.TableExprs)(nil)).Elem()
+)
+
 func transform(node sqlparser.SQLNode, t transformer) sqlparser.SQLNode {
 	if node == nil {
 		return nil
 	}
-	switch {
-	case isSelectNode(node):
+	nodeType := reflect.TypeOf(node)
+	switch nodeType {
+	case selectType:
 		return t.TransformSelect(node.(*sqlparser.Select))
-	case isWhereNode(node):
+	case whereType:
 		return t.TransformWhere(node.(*sqlparser.Where))
-	case isComparisonExprNode(node):
+	case comparisonExprType:
 		return t.TransformComparisonExpr(node.(*sqlparser.ComparisonExpr))
-	case isAndExprNode(node):
+	case andExprType:
 		return t.TransformAndExpr(node.(*sqlparser.AndExpr))
-	case isOrExprNode(node):
+	case orExprType:
 		return t.TransformOrExpr(node.(*sqlparser.OrExpr))
-	case isNotExprNode(node):
+	case notExprType:
 		return t.TransformNotExpr(node.(*sqlparser.NotExpr))
-	case isColNameNode(node):
+	case colNameType:
 		return t.TransformColName(node.(*sqlparser.ColName))
-	case isNumValNode(node):
-		return t.TransformNumVal(node.(sqlparser.NumVal))
-	case isStrValNode(node):
-		return t.TransformStrVal(node.(sqlparser.StrVal))
-	case isBinaryValNode(node):
-		return t.TransformBinaryVal(node.(sqlparser.BinaryVal))
-	case isSelectExprsNode(node):
-		return t.TransformSelectExprs(node.(sqlparser.SelectExprs))
-	case isStarExprNode(node):
+	case starExprType:
 		return t.TransformStarExpr(node.(*sqlparser.StarExpr))
-	case isNonStarExprNode(node):
+	case nonStarExprType:
 		return t.TransformNonStarExpr(node.(*sqlparser.NonStarExpr))
-	case isValTupleNode(node):
-		return t.TransformValTuple(node.(sqlparser.ValTuple))
-	case isParenBoolExprNode(node):
+	case parenBoolExprType:
 		return t.TransformParenBoolExpr(node.(*sqlparser.ParenBoolExpr))
-	case isLimitNode(node):
+	case limitType:
 		return t.TransformLimit(node.(*sqlparser.Limit))
-	case isFuncExprNode(node):
+	case funcExprType:
 		return t.TransformFuncExpr(node.(*sqlparser.FuncExpr))
-	case isRangeCondNode(node):
+	case rangeCondType:
 		return t.TransformRangeCond(node.(*sqlparser.RangeCond))
-	case isDDLNode(node):
+	case ddlType:
 		return t.TransformDDL(node.(*sqlparser.DDL))
-	case isUnionNode(node):
+	case unionType:
 		return t.TransformUnion(node.(*sqlparser.Union))
-	case isInsertNode(node):
+	case insertType:
 		return t.TransformInsert(node.(*sqlparser.Insert))
-	case isValuesNode(node):
-		return t.TransformValues(node.(sqlparser.Values))
-	case isDeleteNode(node):
+	case deleteType:
 		return t.TransformDelete(node.(*sqlparser.Delete))
-	case isTableExprsNode(node):
-		return t.TransformTableExprs(node.(sqlparser.TableExprs))
-	case isAliasedTableExprNode(node):
+	case aliasedTableExprType:
 		return t.TransformAliasedTableExpr(node.(*sqlparser.AliasedTableExpr))
-	case isTableNameNode(node):
+	case tableNameType:
 		return t.TransformTableName(node.(*sqlparser.TableName))
-	case isJoinTableExprNode(node):
+	case joinTableExprType:
 		return t.TransformJoinTableExpr(node.(*sqlparser.JoinTableExpr))
+	case numValType:
+		return t.TransformNumVal(node.(sqlparser.NumVal))
+	case strValType:
+		return t.TransformStrVal(node.(sqlparser.StrVal))
+	case binaryValType:
+		return t.TransformBinaryVal(node.(sqlparser.BinaryVal))
+	case selectExprsType:
+		return t.TransformSelectExprs(node.(sqlparser.SelectExprs))
+	case valTupleType:
+		return t.TransformValTuple(node.(sqlparser.ValTuple))
+	case valuesType:
+		return t.TransformValues(node.(sqlparser.Values))
+	case tableExprsType:
+		return t.TransformTableExprs(node.(sqlparser.TableExprs))
 	default:
 		log.Fatal(fmt.Sprintf("not handled %+v", reflect.TypeOf(node)))
 		return nil
@@ -229,8 +261,5 @@ func isTableNameNode(node sqlparser.SQLNode) bool {
 }
 
 func isType(node sqlparser.SQLNode, ty reflect.Type) bool {
-	if node == nil {
-		return false
-	}
 	return reflect.TypeOf(node) == ty
 }

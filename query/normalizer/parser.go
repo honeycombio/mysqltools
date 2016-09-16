@@ -45,9 +45,6 @@ func (*QuestionMarkExpr) IExpr()    {}
 func (*QuestionMarkExpr) IValExpr() {}
 
 func (n *Parser) TransformSelect(node *sqlparser.Select) sqlparser.SQLNode {
-	if node == nil {
-		return nil
-	}
 	node.SelectExprs, _ = transform(node.SelectExprs, n).(sqlparser.SelectExprs)
 	node.Where, _ = transform(node.Where, n).(*sqlparser.Where)
 	node.From, _ = transform(node.From, n).(sqlparser.TableExprs)
@@ -63,17 +60,11 @@ func (n *Parser) TransformSelectExprs(node sqlparser.SelectExprs) sqlparser.SQLN
 	return newSlice
 }
 func (n *Parser) TransformUnion(node *sqlparser.Union) sqlparser.SQLNode {
-	if node == nil {
-		return nil
-	}
 	node.Left, _ = transform(node.Left, n).(sqlparser.SelectStatement)
 	node.Right, _ = transform(node.Right, n).(sqlparser.SelectStatement)
 	return node
 }
 func (n *Parser) TransformInsert(node *sqlparser.Insert) sqlparser.SQLNode {
-	if node == nil {
-		return nil
-	}
 	node.Comments = make([][]byte, 0) // remove comments
 	node.Table, _ = transform(node.Table, n).(*sqlparser.TableName)
 	node.Rows, _ = transform(node.Rows, n).(sqlparser.InsertRows)
@@ -81,9 +72,6 @@ func (n *Parser) TransformInsert(node *sqlparser.Insert) sqlparser.SQLNode {
 	return node
 }
 func (n *Parser) TransformUpdate(node *sqlparser.Update) sqlparser.SQLNode {
-	if node == nil {
-		return nil
-	}
 	node.Comments = make([][]byte, 0) // remove comments
 	node.Table, _ = transform(node.Table, n).(*sqlparser.TableName)
 	node.Exprs, _ = transform(node.Exprs, n).(sqlparser.UpdateExprs)
@@ -92,9 +80,6 @@ func (n *Parser) TransformUpdate(node *sqlparser.Update) sqlparser.SQLNode {
 	return node
 }
 func (n *Parser) TransformDelete(node *sqlparser.Delete) sqlparser.SQLNode {
-	if node == nil {
-		return nil
-	}
 	node.Comments = make([][]byte, 0) // remove comments
 	node.Table, _ = transform(node.Table, n).(*sqlparser.TableName)
 	node.Where, _ = transform(node.Where, n).(*sqlparser.Where)
@@ -102,9 +87,6 @@ func (n *Parser) TransformDelete(node *sqlparser.Delete) sqlparser.SQLNode {
 	return node
 }
 func (n *Parser) TransformSet(node *sqlparser.Set) sqlparser.SQLNode {
-	if node == nil {
-		return nil
-	}
 	node.Comments = make([][]byte, 0) // remove comments
 	node.Exprs, _ = transform(node.Exprs, n).(sqlparser.UpdateExprs)
 	return node
@@ -128,9 +110,6 @@ func (n *Parser) TransformStarExpr(node *sqlparser.StarExpr) sqlparser.SQLNode {
 }
 
 func (n *Parser) TransformNonStarExpr(node *sqlparser.NonStarExpr) sqlparser.SQLNode {
-	if node == nil {
-		return nil
-	}
 	node.Expr, _ = transform(node.Expr, n).(sqlparser.Expr)
 	return node
 }
@@ -363,14 +342,16 @@ func classifyStatement(node sqlparser.SQLNode) string {
 	if node == nil {
 		return ""
 	}
-	switch {
-	case isSelectNode(node):
+
+	nodeType := reflect.TypeOf(node)
+	switch nodeType {
+	case selectType:
 		return "select"
-	case isUnionNode(node):
+	case unionType:
 		return "union"
-	case isInsertNode(node):
+	case insertType:
 		return "insert"
-	case isDeleteNode(node):
+	case deleteType:
 		return "delete"
 	default:
 		log.Fatal(fmt.Sprintf("not handled %+v", reflect.TypeOf(node)))
