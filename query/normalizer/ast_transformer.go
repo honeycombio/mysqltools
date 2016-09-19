@@ -14,6 +14,8 @@ type transformer interface {
 	TransformUnion(*sqlparser.Union) sqlparser.SQLNode
 	TransformInsert(*sqlparser.Insert) sqlparser.SQLNode
 	TransformUpdate(*sqlparser.Update) sqlparser.SQLNode
+	TransformUpdateExprs(sqlparser.UpdateExprs) sqlparser.SQLNode
+	TransformUpdateExpr(*sqlparser.UpdateExpr) sqlparser.SQLNode
 	TransformDelete(*sqlparser.Delete) sqlparser.SQLNode
 	TransformSet(*sqlparser.Set) sqlparser.SQLNode
 	TransformDDL(*sqlparser.DDL) sqlparser.SQLNode
@@ -50,7 +52,6 @@ type transformer interface {
 	TransformWhen(*sqlparser.When) sqlparser.SQLNode
 	TransformOrder(*sqlparser.Order) sqlparser.SQLNode
 	TransformLimit(*sqlparser.Limit) sqlparser.SQLNode
-	TransformUpdateExpr(*sqlparser.UpdateExpr) sqlparser.SQLNode
 	TransformValues(sqlparser.Values) sqlparser.SQLNode
 	TransformTableExprs(sqlparser.TableExprs) sqlparser.SQLNode
 }
@@ -73,14 +74,18 @@ var (
 	unionType            reflect.Type = reflect.TypeOf((*sqlparser.Union)(nil))
 	insertType           reflect.Type = reflect.TypeOf((*sqlparser.Insert)(nil))
 	deleteType           reflect.Type = reflect.TypeOf((*sqlparser.Delete)(nil))
+	setType              reflect.Type = reflect.TypeOf((*sqlparser.Set)(nil))
 	aliasedTableExprType reflect.Type = reflect.TypeOf((*sqlparser.AliasedTableExpr)(nil))
 	tableNameType        reflect.Type = reflect.TypeOf((*sqlparser.TableName)(nil))
 	joinTableExprType    reflect.Type = reflect.TypeOf((*sqlparser.JoinTableExpr)(nil))
+	otherType            reflect.Type = reflect.TypeOf((*sqlparser.Other)(nil))
 
 	numValType      reflect.Type = reflect.TypeOf((*sqlparser.NumVal)(nil)).Elem()
 	strValType      reflect.Type = reflect.TypeOf((*sqlparser.StrVal)(nil)).Elem()
 	binaryValType   reflect.Type = reflect.TypeOf((*sqlparser.BinaryVal)(nil)).Elem()
 	selectExprsType reflect.Type = reflect.TypeOf((*sqlparser.SelectExprs)(nil)).Elem()
+	updateExprsType reflect.Type = reflect.TypeOf((*sqlparser.UpdateExprs)(nil)).Elem()
+	updateExprType  reflect.Type = reflect.TypeOf((*sqlparser.UpdateExpr)(nil))
 	valTupleType    reflect.Type = reflect.TypeOf((*sqlparser.ValTuple)(nil)).Elem()
 	valuesType      reflect.Type = reflect.TypeOf((*sqlparser.Values)(nil)).Elem()
 	tableExprsType  reflect.Type = reflect.TypeOf((*sqlparser.TableExprs)(nil)).Elem()
@@ -126,6 +131,8 @@ func transform(node sqlparser.SQLNode, t transformer) sqlparser.SQLNode {
 		return t.TransformInsert(node.(*sqlparser.Insert))
 	case deleteType:
 		return t.TransformDelete(node.(*sqlparser.Delete))
+	case setType:
+		return t.TransformSet(node.(*sqlparser.Set))
 	case aliasedTableExprType:
 		return t.TransformAliasedTableExpr(node.(*sqlparser.AliasedTableExpr))
 	case tableNameType:
@@ -140,12 +147,18 @@ func transform(node sqlparser.SQLNode, t transformer) sqlparser.SQLNode {
 		return t.TransformBinaryVal(node.(sqlparser.BinaryVal))
 	case selectExprsType:
 		return t.TransformSelectExprs(node.(sqlparser.SelectExprs))
+	case updateExprsType:
+		return t.TransformUpdateExprs(node.(sqlparser.UpdateExprs))
+	case updateExprType:
+		return t.TransformUpdateExpr(node.(*sqlparser.UpdateExpr))
 	case valTupleType:
 		return t.TransformValTuple(node.(sqlparser.ValTuple))
 	case valuesType:
 		return t.TransformValues(node.(sqlparser.Values))
 	case tableExprsType:
 		return t.TransformTableExprs(node.(sqlparser.TableExprs))
+	case otherType:
+		return nil
 	default:
 		log.Fatal(fmt.Sprintf("not handled %+v", reflect.TypeOf(node)))
 		return nil

@@ -25,6 +25,9 @@ func (n *Parser) NormalizeQuery(q string) string {
 	}
 
 	newAST := transform(sqlAST, n)
+	if newAST == nil {
+		return ""
+	}
 
 	n.LastStatement = classifyStatement(sqlAST)
 
@@ -65,29 +68,37 @@ func (n *Parser) TransformUnion(node *sqlparser.Union) sqlparser.SQLNode {
 	return node
 }
 func (n *Parser) TransformInsert(node *sqlparser.Insert) sqlparser.SQLNode {
-	node.Comments = make([][]byte, 0) // remove comments
+	node.Comments = removeComments(node.Comments)
 	node.Table, _ = transform(node.Table, n).(*sqlparser.TableName)
 	node.Rows, _ = transform(node.Rows, n).(sqlparser.InsertRows)
 	// XXX(toshok) not yet node.OnDup, _ = transform(node.OnDup, n).(sqlparser.OnDup)
 	return node
 }
 func (n *Parser) TransformUpdate(node *sqlparser.Update) sqlparser.SQLNode {
-	node.Comments = make([][]byte, 0) // remove comments
+	node.Comments = removeComments(node.Comments)
 	node.Table, _ = transform(node.Table, n).(*sqlparser.TableName)
 	node.Exprs, _ = transform(node.Exprs, n).(sqlparser.UpdateExprs)
 	node.Where, _ = transform(node.Where, n).(*sqlparser.Where)
 	node.Limit, _ = transform(node.Limit, n).(*sqlparser.Limit)
 	return node
 }
+func (n *Parser) TransformUpdateExprs(node sqlparser.UpdateExprs) sqlparser.SQLNode {
+	var newSlice sqlparser.UpdateExprs
+	for _, ue := range node {
+		updateExpr, _ := transform(ue, n).(*sqlparser.UpdateExpr)
+		newSlice = append(newSlice, updateExpr)
+	}
+	return newSlice
+}
 func (n *Parser) TransformDelete(node *sqlparser.Delete) sqlparser.SQLNode {
-	node.Comments = make([][]byte, 0) // remove comments
+	node.Comments = removeComments(node.Comments)
 	node.Table, _ = transform(node.Table, n).(*sqlparser.TableName)
 	node.Where, _ = transform(node.Where, n).(*sqlparser.Where)
 	node.Limit, _ = transform(node.Limit, n).(*sqlparser.Limit)
 	return node
 }
 func (n *Parser) TransformSet(node *sqlparser.Set) sqlparser.SQLNode {
-	node.Comments = make([][]byte, 0) // remove comments
+	node.Comments = removeComments(node.Comments)
 	node.Exprs, _ = transform(node.Exprs, n).(sqlparser.UpdateExprs)
 	return node
 }
@@ -338,6 +349,13 @@ func (n *Parser) TransformAliasedTablExpr(node *sqlparser.AliasedTableExpr) sqlp
 	return node
 }
 
+func removeComments(comments sqlparser.Comments) sqlparser.Comments {
+	if len(comments) == 0 {
+		return comments
+	}
+	return make([][]byte, 0)
+}
+
 func classifyStatement(node sqlparser.SQLNode) string {
 	if node == nil {
 		return ""
@@ -353,6 +371,12 @@ func classifyStatement(node sqlparser.SQLNode) string {
 		return "insert"
 	case deleteType:
 		return "delete"
+	case setType:
+		return "set"
+	case otherType:
+		return ""
+	case ddlType:
+		return ""
 	default:
 		log.Fatal(fmt.Sprintf("not handled %+v", reflect.TypeOf(node)))
 		return ""
