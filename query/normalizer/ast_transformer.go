@@ -1,7 +1,6 @@
 package normalizer
 
 import (
-	"fmt"
 	"log"
 	"reflect"
 
@@ -160,7 +159,7 @@ func transform(node sqlparser.SQLNode, t transformer) sqlparser.SQLNode {
 	case otherType:
 		return nil
 	default:
-		log.Fatal(fmt.Sprintf("not handled %+v", reflect.TypeOf(node)))
+		log.Printf("ast node not handled %+v", reflect.TypeOf(node))
 		return nil
 	}
 }

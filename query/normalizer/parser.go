@@ -1,7 +1,6 @@
 package normalizer
 
 import (
-	"fmt"
 	"log"
 	"reflect"
 	"sort"
@@ -378,7 +377,7 @@ func classifyStatement(node sqlparser.SQLNode) string {
 	case ddlType:
 		return ""
 	default:
-		log.Fatal(fmt.Sprintf("not handled %+v", reflect.TypeOf(node)))
+		log.Printf("classifyStatement doesn't handle %+v", reflect.TypeOf(node))
 		return ""
 	}
 }
