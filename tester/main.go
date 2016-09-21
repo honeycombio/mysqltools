@@ -21,8 +21,8 @@ var astNormalizerFailure int64
 var scanNormalizerFailure int64
 
 var (
-	scanNormalizer *normalizer.Scanner = &normalizer.Scanner{}
-	astNormalizer  *normalizer.Parser  = &normalizer.Parser{}
+	scanNormalizer = &normalizer.Scanner{}
+	astNormalizer  = &normalizer.Parser{}
 )
 
 func testQuery(input string) {
