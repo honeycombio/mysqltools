@@ -127,12 +127,14 @@ func (n *Parser) TransformColumnDefinition(node *sqlparser.ColumnDefinition) sql
 }
 
 func (n *Parser) TransformCreateTable(node *sqlparser.CreateTable) sqlparser.SQLNode {
-	// XXX(toshok) TableName?
+	n.addTableName(string(node.Name))
 	return node
 }
 
 func (n *Parser) TransformStarExpr(node *sqlparser.StarExpr) sqlparser.SQLNode {
-	// XXX(toshok) TableName
+	if len(node.TableName) > 0 {
+		n.addTableName(string(node.TableName))
+	}
 	return node
 }
 
@@ -154,18 +156,7 @@ func (n *Parser) TransformTableName(node *sqlparser.TableName) sqlparser.SQLNode
 		return nil
 	}
 
-	tableNameStr := sqlparser.String(node)
-	found := false
-	for _, t := range n.LastTables {
-		if t == tableNameStr {
-			found = true
-			break
-		}
-	}
-
-	if !found {
-		n.LastTables = append(n.LastTables, tableNameStr)
-	}
+	n.addTableName(sqlparser.String(node))
 	return node
 }
 
@@ -279,6 +270,11 @@ func (n *Parser) TransformNullVal(node *sqlparser.NullVal) sqlparser.SQLNode {
 	return node
 }
 func (n *Parser) TransformColName(node *sqlparser.ColName) sqlparser.SQLNode {
+	if node.Qualifier != nil {
+		quals := strings.Split(string(node.Qualifier), ".")
+		n.addTableName(quals[len(quals)-1])
+	}
+
 	return node
 }
 func (n *Parser) TransformSubquery(node *sqlparser.Subquery) sqlparser.SQLNode {
@@ -379,6 +375,20 @@ func removeComments(comments sqlparser.Comments) sqlparser.Comments {
 		return comments
 	}
 	return make([][]rune, 0)
+}
+
+func (n *Parser) addTableName(tableNameStr string) {
+	found := false
+	for _, t := range n.LastTables {
+		if t == tableNameStr {
+			found = true
+			break
+		}
+	}
+
+	if !found {
+		n.LastTables = append(n.LastTables, tableNameStr)
+	}
 }
 
 func classifyStatement(node sqlparser.SQLNode) string {
