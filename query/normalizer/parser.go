@@ -24,7 +24,8 @@ func (n *Parser) NormalizeQuery(q string) string {
 	sqlAST, err := sqlparser.Parse(q)
 	if err != nil {
 		fmt.Printf("parse error: \"%s\", query: %s\n", err.Error(), q)
-		return ""
+		s := &Scanner{}
+		return s.NormalizeQuery(q)
 	}
 
 	newAST := transform(sqlAST, n)
@@ -34,7 +35,14 @@ func (n *Parser) NormalizeQuery(q string) string {
 
 	n.LastStatement = classifyStatement(sqlAST)
 
-	sort.Sort(sort.StringSlice(n.LastTables))
+	var lastTables []string
+	for _, t := range n.LastTables {
+		lastTables = append(lastTables, strings.Trim(t, "`"))
+	}
+
+	sort.Sort(sort.StringSlice(lastTables))
+
+	n.LastTables = lastTables
 
 	return string(sqlparser.Serialize(newAST, len(q)))
 }
