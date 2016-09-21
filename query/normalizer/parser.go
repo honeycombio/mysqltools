@@ -7,7 +7,7 @@ import (
 	"sort"
 	"strings"
 
-	"github.com/toshok/sqlparser"
+	"github.com/honeycombio/sqlparser"
 )
 
 type Parser struct {
@@ -78,7 +78,7 @@ func (n *Parser) TransformInsert(node *sqlparser.Insert) sqlparser.SQLNode {
 	node.Comments = removeComments(node.Comments)
 	node.Table, _ = transform(node.Table, n).(*sqlparser.TableName)
 	node.Rows, _ = transform(node.Rows, n).(sqlparser.InsertRows)
-	// XXX(toshok) not yet node.OnDup, _ = transform(node.OnDup, n).(sqlparser.OnDup)
+	node.OnDup, _ = transform(sqlparser.UpdateExprs(node.OnDup), n).(sqlparser.OnDup)
 	return node
 }
 func (n *Parser) TransformUpdate(node *sqlparser.Update) sqlparser.SQLNode {

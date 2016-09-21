@@ -4,7 +4,7 @@ import (
 	"log"
 	"reflect"
 
-	"github.com/toshok/sqlparser"
+	"github.com/honeycombio/sqlparser"
 )
 
 type transformer interface {
