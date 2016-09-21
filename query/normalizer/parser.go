@@ -1,12 +1,12 @@
 package normalizer
 
 import (
-	"fmt"
 	"log"
 	"reflect"
 	"sort"
 	"strings"
 
+	"github.com/Sirupsen/logrus"
 	"github.com/honeycombio/sqlparser"
 )
 
@@ -27,7 +27,7 @@ func (n *Parser) NormalizeQuery(q string) string {
 
 	sqlAST, err := sqlparser.Parse(q)
 	if err != nil {
-		fmt.Printf("parse error: \"%s\", query: %s\n", err.Error(), q)
+		logrus.WithError(err).Debug("parse error, falling back to scan, query: ", q)
 		s := &Scanner{}
 		return s.NormalizeQuery(q)
 	}
