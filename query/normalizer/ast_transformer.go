@@ -36,6 +36,7 @@ type transformer interface {
 	TransformRangeCond(*sqlparser.RangeCond) sqlparser.SQLNode
 	TransformExistsExpr(*sqlparser.ExistsExpr) sqlparser.SQLNode
 	TransformBinaryVal(sqlparser.BinaryVal) sqlparser.SQLNode
+	TransformTimestampVal(sqlparser.TimestampVal) sqlparser.SQLNode
 	TransformStrVal(sqlparser.StrVal) sqlparser.SQLNode
 	TransformNumVal(sqlparser.NumVal) sqlparser.SQLNode
 	TransformValArg(*sqlparser.ValArg) sqlparser.SQLNode
@@ -69,6 +70,7 @@ var (
 	funcExprType         reflect.Type = reflect.TypeOf((*sqlparser.FuncExpr)(nil))
 	caseExprType         reflect.Type = reflect.TypeOf((*sqlparser.CaseExpr)(nil))
 	binaryExprType       reflect.Type = reflect.TypeOf((*sqlparser.BinaryExpr)(nil))
+	unaryExprType        reflect.Type = reflect.TypeOf((*sqlparser.UnaryExpr)(nil))
 	existsExprType       reflect.Type = reflect.TypeOf((*sqlparser.ExistsExpr)(nil))
 	rangeCondType        reflect.Type = reflect.TypeOf((*sqlparser.RangeCond)(nil))
 	ddlType              reflect.Type = reflect.TypeOf((*sqlparser.DDL)(nil))
@@ -86,16 +88,17 @@ var (
 	subqueryType         reflect.Type = reflect.TypeOf((*sqlparser.Subquery)(nil))
 	whenType             reflect.Type = reflect.TypeOf((*sqlparser.When)(nil))
 
-	nullValType     reflect.Type = reflect.TypeOf((*sqlparser.NullVal)(nil))
-	numValType      reflect.Type = reflect.TypeOf((*sqlparser.NumVal)(nil)).Elem()
-	strValType      reflect.Type = reflect.TypeOf((*sqlparser.StrVal)(nil)).Elem()
-	binaryValType   reflect.Type = reflect.TypeOf((*sqlparser.BinaryVal)(nil)).Elem()
-	selectExprsType reflect.Type = reflect.TypeOf((*sqlparser.SelectExprs)(nil)).Elem()
-	updateExprsType reflect.Type = reflect.TypeOf((*sqlparser.UpdateExprs)(nil)).Elem()
-	updateExprType  reflect.Type = reflect.TypeOf((*sqlparser.UpdateExpr)(nil))
-	valTupleType    reflect.Type = reflect.TypeOf((*sqlparser.ValTuple)(nil)).Elem()
-	valuesType      reflect.Type = reflect.TypeOf((*sqlparser.Values)(nil)).Elem()
-	tableExprsType  reflect.Type = reflect.TypeOf((*sqlparser.TableExprs)(nil)).Elem()
+	nullValType      reflect.Type = reflect.TypeOf((*sqlparser.NullVal)(nil))
+	numValType       reflect.Type = reflect.TypeOf((*sqlparser.NumVal)(nil)).Elem()
+	strValType       reflect.Type = reflect.TypeOf((*sqlparser.StrVal)(nil)).Elem()
+	binaryValType    reflect.Type = reflect.TypeOf((*sqlparser.BinaryVal)(nil)).Elem()
+	timestampValType reflect.Type = reflect.TypeOf((*sqlparser.TimestampVal)(nil)).Elem()
+	selectExprsType  reflect.Type = reflect.TypeOf((*sqlparser.SelectExprs)(nil)).Elem()
+	updateExprsType  reflect.Type = reflect.TypeOf((*sqlparser.UpdateExprs)(nil)).Elem()
+	updateExprType   reflect.Type = reflect.TypeOf((*sqlparser.UpdateExpr)(nil))
+	valTupleType     reflect.Type = reflect.TypeOf((*sqlparser.ValTuple)(nil)).Elem()
+	valuesType       reflect.Type = reflect.TypeOf((*sqlparser.Values)(nil)).Elem()
+	tableExprsType   reflect.Type = reflect.TypeOf((*sqlparser.TableExprs)(nil)).Elem()
 )
 
 func transform(node sqlparser.SQLNode, t transformer) sqlparser.SQLNode {
@@ -132,6 +135,8 @@ func transform(node sqlparser.SQLNode, t transformer) sqlparser.SQLNode {
 		return t.TransformCaseExpr(node.(*sqlparser.CaseExpr))
 	case binaryExprType:
 		return t.TransformBinaryExpr(node.(*sqlparser.BinaryExpr))
+	case unaryExprType:
+		return t.TransformUnaryExpr(node.(*sqlparser.UnaryExpr))
 	case existsExprType:
 		return t.TransformExistsExpr(node.(*sqlparser.ExistsExpr))
 	case rangeCondType:
@@ -162,6 +167,8 @@ func transform(node sqlparser.SQLNode, t transformer) sqlparser.SQLNode {
 		return t.TransformNumVal(node.(sqlparser.NumVal))
 	case strValType:
 		return t.TransformStrVal(node.(sqlparser.StrVal))
+	case timestampValType:
+		return t.TransformTimestampVal(node.(sqlparser.TimestampVal))
 	case binaryValType:
 		return t.TransformBinaryVal(node.(sqlparser.BinaryVal))
 	case selectExprsType:

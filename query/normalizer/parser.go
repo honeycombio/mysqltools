@@ -19,6 +19,8 @@ func (n *Parser) NormalizeQuery(q string) string {
 	n.LastStatement = ""
 	n.LastTables = make([]string, 0)
 
+	q = strings.ToLower(q)
+
 	sqlAST, err := sqlparser.Parse(q)
 	if err != nil {
 		fmt.Printf("parse error: \"%s\", query: %s\n", err.Error(), q)
@@ -237,6 +239,9 @@ func (n *Parser) TransformExistsExpr(node *sqlparser.ExistsExpr) sqlparser.SQLNo
 	}
 	node.Subquery, _ = transform(node.Subquery, n).(*sqlparser.Subquery)
 	return node
+}
+func (n *Parser) TransformTimestampVal(node sqlparser.TimestampVal) sqlparser.SQLNode {
+	return &QuestionMarkExpr{}
 }
 func (n *Parser) TransformBinaryVal(node sqlparser.BinaryVal) sqlparser.SQLNode {
 	return &QuestionMarkExpr{}

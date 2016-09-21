@@ -60,8 +60,22 @@ func main() {
 	for scanner.Scan() {
 		text := scanner.Text()
 		text = strings.TrimSpace(text)
-		if len(text) == 0 || strings.HasPrefix(text, "--") || strings.HasPrefix(text, "#") {
+		if len(text) == 0 || strings.HasPrefix(text, "#") {
 			continue
+		}
+
+		if strings.HasPrefix(text, "--") {
+			text = strings.TrimPrefix(text, "--")
+			c := strings.Split(text, " ")
+			command, args := c[0], c[1:]
+			switch command {
+			case "echo":
+				fmt.Println(strings.Join(args, " "))
+				continue
+			default:
+				fmt.Println("unhandled command: " + text)
+				continue
+			}
 		}
 
 		queryText = queryText + " " + text
