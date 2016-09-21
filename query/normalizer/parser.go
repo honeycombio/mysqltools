@@ -19,6 +19,10 @@ func (n *Parser) NormalizeQuery(q string) string {
 	n.LastStatement = ""
 	n.LastTables = make([]string, 0)
 
+	if q == "" {
+		return ""
+	}
+
 	q = strings.ToLower(q)
 
 	sqlAST, err := sqlparser.Parse(q)
