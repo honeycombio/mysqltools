@@ -36,7 +36,7 @@ func (n *Parser) NormalizeQuery(q string) string {
 
 	sort.Sort(sort.StringSlice(n.LastTables))
 
-	return strings.ToLower(sqlparser.String(newAST))
+	return string(sqlparser.Serialize(newAST, len(q)))
 }
 
 // QuestionMarkExpr is a special SQLNode used to render '?'.  we replace literal values with this in our transformer
@@ -45,6 +45,10 @@ type QuestionMarkExpr struct {
 
 func (q *QuestionMarkExpr) Format(buf *sqlparser.TrackedBuffer) {
 	buf.Myprintf("?")
+}
+
+func (q *QuestionMarkExpr) Serialize(runes []rune) []rune {
+	return append(runes, '?')
 }
 
 func (*QuestionMarkExpr) IExpr()    {}
@@ -366,7 +370,7 @@ func removeComments(comments sqlparser.Comments) sqlparser.Comments {
 	if len(comments) == 0 {
 		return comments
 	}
-	return make([][]byte, 0)
+	return make([][]rune, 0)
 }
 
 func classifyStatement(node sqlparser.SQLNode) string {
