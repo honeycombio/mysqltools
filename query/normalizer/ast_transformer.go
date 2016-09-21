@@ -24,7 +24,7 @@ type transformer interface {
 	TransformNonStarExpr(*sqlparser.NonStarExpr) sqlparser.SQLNode
 	TransformAliasedTableExpr(*sqlparser.AliasedTableExpr) sqlparser.SQLNode
 	TransformTableName(*sqlparser.TableName) sqlparser.SQLNode
-	//	TransformParentTableExpr(*sqlparser.ParentTableExpr) sqlparser.SQLNode
+	TransformParenTableExpr(*sqlparser.ParenTableExpr) sqlparser.SQLNode
 	TransformJoinTableExpr(*sqlparser.JoinTableExpr) sqlparser.SQLNode
 	TransformWhere(*sqlparser.Where) sqlparser.SQLNode
 	TransformIndexHints(*sqlparser.IndexHints) sqlparser.SQLNode // needed?
@@ -34,7 +34,6 @@ type transformer interface {
 	TransformParenBoolExpr(*sqlparser.ParenBoolExpr) sqlparser.SQLNode
 	TransformComparisonExpr(*sqlparser.ComparisonExpr) sqlparser.SQLNode
 	TransformRangeCond(*sqlparser.RangeCond) sqlparser.SQLNode
-	TransformNullCheck(*sqlparser.NullCheck) sqlparser.SQLNode
 	TransformExistsExpr(*sqlparser.ExistsExpr) sqlparser.SQLNode
 	TransformBinaryVal(sqlparser.BinaryVal) sqlparser.SQLNode
 	TransformStrVal(sqlparser.StrVal) sqlparser.SQLNode
@@ -68,17 +67,26 @@ var (
 	parenBoolExprType    reflect.Type = reflect.TypeOf((*sqlparser.ParenBoolExpr)(nil))
 	limitType            reflect.Type = reflect.TypeOf((*sqlparser.Limit)(nil))
 	funcExprType         reflect.Type = reflect.TypeOf((*sqlparser.FuncExpr)(nil))
+	caseExprType         reflect.Type = reflect.TypeOf((*sqlparser.CaseExpr)(nil))
+	binaryExprType       reflect.Type = reflect.TypeOf((*sqlparser.BinaryExpr)(nil))
+	existsExprType       reflect.Type = reflect.TypeOf((*sqlparser.ExistsExpr)(nil))
 	rangeCondType        reflect.Type = reflect.TypeOf((*sqlparser.RangeCond)(nil))
 	ddlType              reflect.Type = reflect.TypeOf((*sqlparser.DDL)(nil))
 	unionType            reflect.Type = reflect.TypeOf((*sqlparser.Union)(nil))
 	insertType           reflect.Type = reflect.TypeOf((*sqlparser.Insert)(nil))
+	updateType           reflect.Type = reflect.TypeOf((*sqlparser.Update)(nil))
 	deleteType           reflect.Type = reflect.TypeOf((*sqlparser.Delete)(nil))
 	setType              reflect.Type = reflect.TypeOf((*sqlparser.Set)(nil))
 	aliasedTableExprType reflect.Type = reflect.TypeOf((*sqlparser.AliasedTableExpr)(nil))
 	tableNameType        reflect.Type = reflect.TypeOf((*sqlparser.TableName)(nil))
+	parenTableExprType   reflect.Type = reflect.TypeOf((*sqlparser.ParenTableExpr)(nil))
 	joinTableExprType    reflect.Type = reflect.TypeOf((*sqlparser.JoinTableExpr)(nil))
 	otherType            reflect.Type = reflect.TypeOf((*sqlparser.Other)(nil))
+	createTableType      reflect.Type = reflect.TypeOf((*sqlparser.CreateTable)(nil))
+	subqueryType         reflect.Type = reflect.TypeOf((*sqlparser.Subquery)(nil))
+	whenType             reflect.Type = reflect.TypeOf((*sqlparser.When)(nil))
 
+	nullValType     reflect.Type = reflect.TypeOf((*sqlparser.NullVal)(nil))
 	numValType      reflect.Type = reflect.TypeOf((*sqlparser.NumVal)(nil)).Elem()
 	strValType      reflect.Type = reflect.TypeOf((*sqlparser.StrVal)(nil)).Elem()
 	binaryValType   reflect.Type = reflect.TypeOf((*sqlparser.BinaryVal)(nil)).Elem()
@@ -120,6 +128,12 @@ func transform(node sqlparser.SQLNode, t transformer) sqlparser.SQLNode {
 		return t.TransformLimit(node.(*sqlparser.Limit))
 	case funcExprType:
 		return t.TransformFuncExpr(node.(*sqlparser.FuncExpr))
+	case caseExprType:
+		return t.TransformCaseExpr(node.(*sqlparser.CaseExpr))
+	case binaryExprType:
+		return t.TransformBinaryExpr(node.(*sqlparser.BinaryExpr))
+	case existsExprType:
+		return t.TransformExistsExpr(node.(*sqlparser.ExistsExpr))
 	case rangeCondType:
 		return t.TransformRangeCond(node.(*sqlparser.RangeCond))
 	case ddlType:
@@ -128,6 +142,8 @@ func transform(node sqlparser.SQLNode, t transformer) sqlparser.SQLNode {
 		return t.TransformUnion(node.(*sqlparser.Union))
 	case insertType:
 		return t.TransformInsert(node.(*sqlparser.Insert))
+	case updateType:
+		return t.TransformUpdate(node.(*sqlparser.Update))
 	case deleteType:
 		return t.TransformDelete(node.(*sqlparser.Delete))
 	case setType:
@@ -136,8 +152,12 @@ func transform(node sqlparser.SQLNode, t transformer) sqlparser.SQLNode {
 		return t.TransformAliasedTableExpr(node.(*sqlparser.AliasedTableExpr))
 	case tableNameType:
 		return t.TransformTableName(node.(*sqlparser.TableName))
+	case parenTableExprType:
+		return t.TransformParenTableExpr(node.(*sqlparser.ParenTableExpr))
 	case joinTableExprType:
 		return t.TransformJoinTableExpr(node.(*sqlparser.JoinTableExpr))
+	case nullValType:
+		return t.TransformNullVal(node.(*sqlparser.NullVal))
 	case numValType:
 		return t.TransformNumVal(node.(sqlparser.NumVal))
 	case strValType:
@@ -156,6 +176,12 @@ func transform(node sqlparser.SQLNode, t transformer) sqlparser.SQLNode {
 		return t.TransformValues(node.(sqlparser.Values))
 	case tableExprsType:
 		return t.TransformTableExprs(node.(sqlparser.TableExprs))
+	case createTableType:
+		return t.TransformCreateTable(node.(*sqlparser.CreateTable))
+	case subqueryType:
+		return t.TransformSubquery(node.(*sqlparser.Subquery))
+	case whenType:
+		return t.TransformWhen(node.(*sqlparser.When))
 	case otherType:
 		return nil
 	default:

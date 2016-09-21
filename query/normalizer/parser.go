@@ -1,6 +1,7 @@
 package normalizer
 
 import (
+	"fmt"
 	"log"
 	"reflect"
 	"sort"
@@ -20,6 +21,7 @@ func (n *Parser) NormalizeQuery(q string) string {
 
 	sqlAST, err := sqlparser.Parse(q)
 	if err != nil {
+		fmt.Printf("parse error: \"%s\", query: %s\n", err.Error(), q)
 		return ""
 	}
 
@@ -111,6 +113,7 @@ func (n *Parser) TransformColumnDefinition(node *sqlparser.ColumnDefinition) sql
 }
 
 func (n *Parser) TransformCreateTable(node *sqlparser.CreateTable) sqlparser.SQLNode {
+	// XXX(toshok) TableName?
 	return node
 }
 
@@ -152,9 +155,14 @@ func (n *Parser) TransformTableName(node *sqlparser.TableName) sqlparser.SQLNode
 	return node
 }
 
-//func (n *Parser) TransformParentTableExpr(node *sqlparser.ParentTableExpr) sqlparser.SQLNode {
-//	return node
-//}
+func (n *Parser) TransformParenTableExpr(node *sqlparser.ParenTableExpr) sqlparser.SQLNode {
+	if node == nil {
+		return nil
+	}
+	node.Expr, _ = transform(node.Expr, n).(sqlparser.TableExpr)
+	return node
+}
+
 func (n *Parser) TransformJoinTableExpr(node *sqlparser.JoinTableExpr) sqlparser.SQLNode {
 	if node == nil {
 		return nil
@@ -223,10 +231,11 @@ func (n *Parser) TransformRangeCond(node *sqlparser.RangeCond) sqlparser.SQLNode
 	node.To, _ = transform(node.To, n).(sqlparser.ValExpr)
 	return node
 }
-func (n *Parser) TransformNullCheck(node *sqlparser.NullCheck) sqlparser.SQLNode {
-	return node
-}
 func (n *Parser) TransformExistsExpr(node *sqlparser.ExistsExpr) sqlparser.SQLNode {
+	if node == nil {
+		return nil
+	}
+	node.Subquery, _ = transform(node.Subquery, n).(*sqlparser.Subquery)
 	return node
 }
 func (n *Parser) TransformBinaryVal(node sqlparser.BinaryVal) sqlparser.SQLNode {
@@ -368,10 +377,14 @@ func classifyStatement(node sqlparser.SQLNode) string {
 		return "union"
 	case insertType:
 		return "insert"
+	case updateType:
+		return "update"
 	case deleteType:
 		return "delete"
 	case setType:
 		return "set"
+	case createTableType:
+		return "create table"
 	case otherType:
 		return ""
 	case ddlType:
