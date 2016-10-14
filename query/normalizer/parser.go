@@ -409,7 +409,7 @@ func getComments(node sqlparser.SQLNode) []string {
 
 	var rv []string
 	for _, c := range comments {
-		rv = append(rv, string(c))
+		rv = append(rv, strings.TrimSpace(string(c)))
 	}
 	return rv
 }
