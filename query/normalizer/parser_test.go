@@ -97,7 +97,7 @@ var parserTests = []struct {
 		"insert into `tablename`(intcol,floatcol) select intcol2,floatcol2 from sourcetable where id = ?",
 		"insert",
 		[]string{"sourcetable", "tablename"},
-		[]string{"comment1", "comment2"},
+		[]string{"comment1", "comment2", "comment3"},
 	},
 	{"insert with subquery and constants",
 		"INSERT INTO `tablename` (col1, col2, col3) SELECT 1, 2, intCol2, floatCol2 FROM sourceTable WHERE id = 12345",

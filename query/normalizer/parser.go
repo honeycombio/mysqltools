@@ -19,6 +19,7 @@ type Parser struct {
 func (n *Parser) NormalizeQuery(q string) string {
 	n.LastStatement = ""
 	n.LastTables = make([]string, 0)
+	n.LastComments = make([]string, 0)
 
 	if q == "" {
 		return ""
@@ -48,7 +49,6 @@ func (n *Parser) NormalizeQuery(q string) string {
 	sort.Sort(sort.StringSlice(lastTables))
 
 	n.LastTables = lastTables
-	n.LastComments = getComments(sqlAST)
 
 	return string(sqlparser.Serialize(newAST, len(q)))
 }
@@ -69,6 +69,8 @@ func (*QuestionMarkExpr) IExpr()    {}
 func (*QuestionMarkExpr) IValExpr() {}
 
 func (n *Parser) TransformSelect(node *sqlparser.Select) sqlparser.SQLNode {
+	n.addComments(node.Comments)
+	node.Comments = removeComments(node.Comments)
 	node.SelectExprs, _ = transform(node.SelectExprs, n).(sqlparser.SelectExprs)
 	node.Where, _ = transform(node.Where, n).(*sqlparser.Where)
 	node.From, _ = transform(node.From, n).(sqlparser.TableExprs)
@@ -89,12 +91,16 @@ func (n *Parser) TransformUnion(node *sqlparser.Union) sqlparser.SQLNode {
 	return node
 }
 func (n *Parser) TransformInsert(node *sqlparser.Insert) sqlparser.SQLNode {
+	n.addComments(node.Comments)
+	node.Comments = removeComments(node.Comments)
 	node.Table, _ = transform(node.Table, n).(*sqlparser.TableName)
 	node.Rows, _ = transform(node.Rows, n).(sqlparser.InsertRows)
 	node.OnDup, _ = transform(sqlparser.UpdateExprs(node.OnDup), n).(sqlparser.OnDup)
 	return node
 }
 func (n *Parser) TransformUpdate(node *sqlparser.Update) sqlparser.SQLNode {
+	n.addComments(node.Comments)
+	node.Comments = removeComments(node.Comments)
 	node.Table, _ = transform(node.Table, n).(*sqlparser.TableName)
 	node.Exprs, _ = transform(node.Exprs, n).(sqlparser.UpdateExprs)
 	node.Where, _ = transform(node.Where, n).(*sqlparser.Where)
@@ -110,12 +116,16 @@ func (n *Parser) TransformUpdateExprs(node sqlparser.UpdateExprs) sqlparser.SQLN
 	return newSlice
 }
 func (n *Parser) TransformDelete(node *sqlparser.Delete) sqlparser.SQLNode {
+	n.addComments(node.Comments)
+	node.Comments = removeComments(node.Comments)
 	node.Table, _ = transform(node.Table, n).(*sqlparser.TableName)
 	node.Where, _ = transform(node.Where, n).(*sqlparser.Where)
 	node.Limit, _ = transform(node.Limit, n).(*sqlparser.Limit)
 	return node
 }
 func (n *Parser) TransformSet(node *sqlparser.Set) sqlparser.SQLNode {
+	n.addComments(node.Comments)
+	node.Comments = removeComments(node.Comments)
 	node.Exprs, _ = transform(node.Exprs, n).(sqlparser.UpdateExprs)
 	return node
 }
@@ -372,6 +382,22 @@ func (n *Parser) TransformAliasedTablExpr(node *sqlparser.AliasedTableExpr) sqlp
 	return node
 }
 
+func (n *Parser) addComments(comments sqlparser.Comments) {
+	if comments == nil {
+		return
+	}
+	for _, c := range comments {
+		n.LastComments = append(n.LastComments, strings.TrimSpace(string(c)))
+	}
+}
+
+func removeComments(comments sqlparser.Comments) sqlparser.Comments {
+	if len(comments) == 0 {
+		return comments
+	}
+	return make([][]rune, 0)
+}
+
 func (n *Parser) addTableName(tableNameStr string) {
 	found := false
 	for _, t := range n.LastTables {
@@ -384,34 +410,6 @@ func (n *Parser) addTableName(tableNameStr string) {
 	if !found {
 		n.LastTables = append(n.LastTables, tableNameStr)
 	}
-}
-
-func getComments(node sqlparser.SQLNode) []string {
-	// grab the first comment from the node and return it
-	nodeType := reflect.TypeOf(node)
-	var comments sqlparser.Comments
-	switch nodeType {
-	case selectType:
-		comments = (node.(*sqlparser.Select)).Comments
-	case deleteType:
-		comments = (node.(*sqlparser.Delete)).Comments
-	case insertType:
-		comments = (node.(*sqlparser.Insert)).Comments
-	case updateType:
-		comments = (node.(*sqlparser.Update)).Comments
-	case setType:
-		comments = (node.(*sqlparser.Set)).Comments
-	}
-
-	if comments == nil {
-		return []string{}
-	}
-
-	var rv []string
-	for _, c := range comments {
-		rv = append(rv, strings.TrimSpace(string(c)))
-	}
-	return rv
 }
 
 func classifyStatement(node sqlparser.SQLNode) string {
