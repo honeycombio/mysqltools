@@ -127,6 +127,14 @@ var parserTests = []struct {
 		[]string{},
 		[]string{},
 	},
+
+	{"IN clauses normalized",
+		"SELECT `colname` FROM `tablename` WHERE id IN (1, 2, 3, 4, 5)",
+		"select `colname` from `tablename` where id in (...)",
+		"select",
+		[]string{"tablename"},
+		[]string{},
+	},
 	//{"alter table", "ALTER TABLE `tablename` ADD COLUMN `text` VARCHAR(100) NOT NULL AFTER `before_text`", "alter table tablename add column text varchar(?) not null after before_text"},
 }
 
