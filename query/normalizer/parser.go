@@ -25,9 +25,8 @@ func (n *Parser) NormalizeQuery(q string) string {
 		return ""
 	}
 
-	q = strings.ToLower(q)
-
 	sqlAST, err := sqlparser.Parse(q)
+
 	if err != nil {
 		logrus.WithError(err).Debug("parse error, falling back to scan, query: ", q)
 		s := &Scanner{}
@@ -39,10 +38,11 @@ func (n *Parser) NormalizeQuery(q string) string {
 		return ""
 	}
 
-	n.LastStatement = classifyStatement(sqlAST)
+	n.LastStatement = strings.ToLower(classifyStatement(sqlAST))
 
 	var lastTables []string
 	for _, t := range n.LastTables {
+		t = strings.ToLower(t)
 		lastTables = append(lastTables, strings.Trim(t, "`"))
 	}
 
@@ -50,7 +50,7 @@ func (n *Parser) NormalizeQuery(q string) string {
 
 	n.LastTables = lastTables
 
-	return string(sqlparser.Serialize(newAST, len(q)))
+	return strings.ToLower(string(sqlparser.Serialize(newAST, len(q))))
 }
 
 // QuestionMarkExpr is a special SQLNode used to render '?'.  we replace literal values with this in our transformer
