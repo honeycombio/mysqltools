@@ -1,5 +1,7 @@
 # mysqltools
 
+[![OSS Lifecycle](https://img.shields.io/osslifecycle/honeycombio/REPO)](https://github.com/honeycombio/home/blob/main/honeycomb-oss-lifecycle-and-practices.md)
+
 [![Build Status](https://travis-ci.org/honeycombio/mysqltools.svg?branch=master)](https://travis-ci.org/honeycombio/mysqltools)
 
 ## Summary
