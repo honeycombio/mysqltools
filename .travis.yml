@@ -1,8 +1,0 @@
-language: go
-
-dist: trusty
-
-go:
-    - "1.10"
-
-script: go test github.com/honeycombio/mysqltools/...
