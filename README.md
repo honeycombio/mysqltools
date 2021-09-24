@@ -1,6 +1,6 @@
 # mysqltools
 
-[![OSS Lifecycle](https://img.shields.io/osslifecycle/honeycombio/mysqltools)](https://github.com/honeycombio/home/blob/main/honeycomb-oss-lifecycle-and-practices.md)
+[![OSS Lifecycle](https://img.shields.io/osslifecycle/honeycombio/mysqltools?color=success)](https://github.com/honeycombio/home/blob/main/honeycomb-oss-lifecycle-and-practices.md)
 
 ## Summary
 
